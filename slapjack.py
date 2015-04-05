@@ -1,27 +1,67 @@
-import random, time, thread, threading
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
-this game is a work in progress - 9/21/2014
-
-slapjack.py
-
-to do:
-
- - fix loop to prevent duplicate cards
- - thread stop printing cards
- - develop a system to count score
-
-
+Game of SlapJack
 '''
+import sys, random, time
+#colorama
+
+#Class Deck
+    #draw function
+    #shuffle function
 
 
-deck = {} #this is a dictionary of 0-51. Each value has two keys.
+class Card(object):
+    '''Generates a card with a suit, rank'''
 
-faces = ['Ace', 'Two', 'Three', 'Four', 'Five', 'Six',\
-  'Seven', 'Eight', 'Nine', 'Ten', 'Jack',\
-  'Queen', 'King']
+    ##use class to create unicode representation
 
-suits = ['Spades', 'Diamonds', 'Clubs', 'Hearts']
+    def __init__(self, suit, rank):
+        self.suit = suit
+        self.rank = rank
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+    #def __repr__(self): # should be used to reprensent data as it is inputed
+        #return '%s of %s' % (self.rank.encode('utf-8'), self.suit.encode('utf-8'))
+
+    def __unicode__(self):
+        return '%s of %s' % (self.rank, self.suit)
+
+class Deck(object):
+
+    def __init__(self):
+        self.deck = []
+
+
+    def makeDeck(self):
+        '''Generates a deck of 52 cards of Card objects'''
+
+        ranks = ['A', '2', '3', '4', '5', '6','7', '8', '9', '10', 'J','Q', 'K']
+        suits = ['Spades', 'Diamonds', 'Clubs', 'Hearts']
+        uniSuits = [u'♠', u'♥', u'♦', u'♣']
+        for suit in uniSuits:
+            for rank in ranks:
+                self.deck.append(Card(suit, rank))
+        return self.deck
+
+    def draw(self):
+        '''Prints a card from deck if it hasn't been played before'''
+
+        random.shuffle(self.deck)
+        card = self.deck.pop()
+        print card
+
+
+def timed_print():
+    '''prints out a card every half-second'''
+    for i in range(52):
+        time.sleep(0.4)
+        print_card()
+
+d = Deck()
+d.makeDeck()
 
 
 def input_thread(L):
@@ -29,28 +69,12 @@ def input_thread(L):
     raw_input()
     L.append(None) # list that will be appended if player hits a key ()"slaping")
 
-
-def initdeck():
-#function to initiliaze the deck of cards
-    for i in range(52):
-        card_face = random.choice(faces)
-        card_suit = random.choice(suits)
-        deck[0] = (card_suit,card_face) # initial card to be checked against
-
-        if (card_suit,card_face) in deck: # this loop is meant to check for duplicate cards and not print them. Currently not working.
-            break
-        else:
-            deck[i] = (card_suit,card_face)
-
 def printdeck():
 #function to print deck
     L = []
     thread.start_new_thread(input_thread, (L,)) #this thread is waiting for user input
     while True:
-        for i in range(52):
-            card = deck.get(i) #sudden realization that I should probably use some loop logic to prevent duplicates from being printed
-            print card[1] + ' of ' + card[0]
-            time.sleep(1)
+            timed_print()
             if L:
                 print "You Slapped!"
                 L.pop()
