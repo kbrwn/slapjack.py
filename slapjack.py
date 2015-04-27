@@ -2,43 +2,69 @@
 # -*- coding: utf-8 -*-
 '''
 Game of SlapJack
+26 / 04 / 2015
 '''
-import sys, random, time
-#colorama
+from __future__ import unicode_literals, division
+import sys, random, time, thread
+from curtsies import Input, fmtstr
+from curtsies.fmtfuncs import *
+import curtsies.events
 
-#Class Deck
-    #draw function
-    #shuffle function
+
+class Frame(curtsies.events.ScheduledEvent):
+    pass
+
+class Game(object):
+
+    def __init__(self):
+        self.d = Deck()
+        self.d.makeDeck()
+        self.score = []
+
+    def tick(self):
+        self.d.draw()
+
+    def process_event(self, e):
+        # put logic for scoring and stuff
+        if e == u'<Ctrl-j>':
+            slapCard = self.d.played_cards.pop()
+            if slapCard.rank != u'J':
+                print 'Not a Jack'
+                self.score = []
+            else:
+                self.score.append(len(self.d.played_cards))
+                print 'Slapped %d' % sum(self.score)
+                self.player_hand = self.d.played_cards
+                self.d.played_cards = []
 
 
 class Card(object):
     '''Generates a card with a suit, rank'''
 
-    ##use class to create unicode representation
-
     def __init__(self, suit, rank):
         self.suit = suit
         self.rank = rank
 
+    def __unicode__(self):
+        if self.suit ==  u'♥' or self.suit == u'♦':
+            self.suit = red(self.suit)
+            return "%s%s" % (self.rank, self.suit)
+        return "%s%s" % (self.rank, self.suit)
+
     def __str__(self):
         return unicode(self).encode('utf-8')
-
-    #def __repr__(self): # should be used to reprensent data as it is inputed
-        #return '%s of %s' % (self.rank.encode('utf-8'), self.suit.encode('utf-8'))
-
-    def __unicode__(self):
-        return '%s of %s' % (self.rank, self.suit)
 
 class Deck(object):
 
     def __init__(self):
         self.deck = []
-
+        self.played_cards = []
+        self.endgame = False
 
     def makeDeck(self):
         '''Generates a deck of 52 cards of Card objects'''
 
-        ranks = ['A', '2', '3', '4', '5', '6','7', '8', '9', '10', 'J','Q', 'K']
+        ranks = [u'A', u'2', u'3', u'4', u'5', u'6', u'7', u'8', u'9', u'10', u'J', u'Q', u'K']
         suits = ['Spades', 'Diamonds', 'Clubs', 'Hearts']
         uniSuits = [u'♠', u'♥', u'♦', u'♣']
         for suit in uniSuits:
@@ -47,38 +73,40 @@ class Deck(object):
         return self.deck
 
     def draw(self):
-        '''Prints a card from deck if it hasn't been played before'''
+        '''selects card to be played from deck'''
 
         random.shuffle(self.deck)
-        card = self.deck.pop()
-        print card
+        try:
+            card = self.deck.pop()
+            self.played_cards.append(card)
+            print card
+        except IndexError:
+            self.endgame = True
 
+def play():
+    game = Game()
+    dt = 1/2
 
-def timed_print():
-    '''prints out a card every half-second'''
-    for i in range(52):
-        time.sleep(0.4)
-        print_card()
+    reactor = Input()
+    schedule_next_frame = reactor.scheduled_event_trigger(Frame)
+    schedule_next_frame(when=time.time())
 
-d = Deck()
-d.makeDeck()
+    with reactor:
+        for e in reactor:
+            if game.d.endgame == True:
+                print 'Final Score: %d' % sum(game.score)
+                sys.exit()
+            if isinstance(e, Frame):
+                game.tick()
+                when = e.when + dt
+                while when < time.time():
+                    when += dt
+                schedule_next_frame(when)
 
+            elif e == u'<ESC>':
+                break
 
-def input_thread(L):
-#function to use in the thread that waits for input
-    raw_input()
-    L.append(None) # list that will be appended if player hits a key ()"slaping")
+            else:
+                game.process_event(e)
 
-def printdeck():
-#function to print deck
-    L = []
-    thread.start_new_thread(input_thread, (L,)) #this thread is waiting for user input
-    while True:
-            timed_print()
-            if L:
-                print "You Slapped!"
-                L.pop()
-
-
-initdeck()
-printdeck()
+play()
